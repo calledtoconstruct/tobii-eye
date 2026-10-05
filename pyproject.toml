@@ -1,0 +1,17 @@
+[project]
+name = "tobii-input"
+version = "0.1.0"
+description = "Read gaze from a Tobii Eye Tracker 5 through the local tobiifreed socket"
+requires-python = ">=3.11"
+
+[project.scripts]
+tobii-gaze = "tobii_input.__main__:main"
+tobii-calibrate = "tobii_input.calibrate:main"
+tobii-pop = "tobii_input.game:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

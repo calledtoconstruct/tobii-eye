@@ -1,0 +1,5 @@
+prefix/
+third_party/
+__pycache__/
+*.pyc
+*.pkg.tar.zst

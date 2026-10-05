@@ -1,0 +1,7 @@
+# Tobii Eye Tracker 5 (EyeChip). Gaze is the vendor bulk interface.
+# This file is named 60- so it runs before 73-seat-late.rules, which is
+# the rule that actually applies the seat ACL for TAG+=uaccess.
+# A 99- rule sets the tag too late, so the node stays root-only.
+# GROUP=wheel lets the local admin open it even if the seat ACL is skipped.
+SUBSYSTEM=="usb", ATTR{idVendor}=="2104", ATTR{idProduct}=="0313", MODE="0660", GROUP="wheel", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2104", ATTR{idProduct}=="0102", MODE="0660", GROUP="wheel", TAG+="uaccess"

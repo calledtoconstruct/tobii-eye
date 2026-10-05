@@ -1,0 +1,36 @@
+# Maintainer: Joseph Woolley <joe@calledtoconstruct.net>
+# Source is this tobii-eye tree. There is no release tarball yet.
+# License is unset in the tree; GPL-3.0-only matches the daemon it speaks to.
+pkgname=python-tobii-input
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Gaze client, calibration window, and Pop for the Tobii Eye Tracker 5'
+arch=('any')
+url='https://github.com/calledtoconstruct/tobii-eye'
+license=('GPL-3.0-only')
+depends=('python' 'python-gobject' 'gtk4' 'tobiifreed')
+options=('!debug')
+
+package() {
+  local dest pyver
+  pyver=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+  dest="$pkgdir/usr/lib/python${pyver}/site-packages/tobii_input"
+  install -d "$dest"
+  cp -a "$startdir/../../src/tobii_input/." "$dest/"
+  find "$dest" -type d -name '__pycache__' -prune -exec rm -rf {} +
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/tobii-gaze" <<'EOF'
+#!/usr/bin/python
+from tobii_input.__main__ import main
+raise SystemExit(main())
+EOF
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/tobii-calibrate" <<'EOF'
+#!/usr/bin/python
+from tobii_input.calibrate import main
+raise SystemExit(main())
+EOF
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/tobii-pop" <<'EOF'
+#!/usr/bin/python
+from tobii_input.game import main
+raise SystemExit(main())
+EOF
+}
