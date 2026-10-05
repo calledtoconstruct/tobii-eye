@@ -3,7 +3,7 @@ pkgname=tobiifreed
 pkgver=0+ad82906
 pkgrel=1
 pkgdesc='Userspace daemon for the Tobii Eye Tracker 5'
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url='https://github.com/Aetherall/tobiifree'
 license=('GPL-3.0-only')
 depends=('libusb')
@@ -12,18 +12,20 @@ install=tobiifreed.install
 options=('!debug')
 source=(
   "git+https://github.com/Aetherall/tobiifree.git#commit=ad82906a9c97f03be8bfcfeff9453198f6feb7a0"
-  'https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz'
   '60-tobii-eyetracker.rules'
   'tobiifreed.service'
   'reconnect.patch'
 )
+source_x86_64=('https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz')
+source_aarch64=('https://ziglang.org/download/0.15.2/zig-aarch64-linux-0.15.2.tar.xz')
 sha256sums=(
   'SKIP'
-  '02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239'
   '06ceddcdcf7d5be5a9a06d7723157f0f1c099c4db9ff073cdf85f29724e668a2'
   'ffc9608306867e2a86f42d61f419ae600bbe6fb2567379d268f24de66451d26c'
   'ce0a328719c5d5cddcf07ab565a0e8ba19953798427747c2b6563726cd507645'
 )
+sha256sums_x86_64=('02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239')
+sha256sums_aarch64=('958ed7d1e00d0ea76590d27666efbf7a932281b3d7ba0c6b01b0ff26498f667f')
 
 prepare() {
   cd tobiifree
@@ -32,7 +34,7 @@ prepare() {
 
 build() {
   cd tobiifree/applications/tobiifreed
-  "$srcdir/zig-x86_64-linux-0.15.2/zig" build -Doptimize=ReleaseSafe --prefix "$srcdir/out"
+  "$srcdir/zig-${CARCH}-linux-0.15.2/zig" build -Doptimize=ReleaseSafe --prefix "$srcdir/out"
 }
 
 package() {
