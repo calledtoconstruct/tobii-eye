@@ -22,27 +22,20 @@ the vendor-specific interface:
 | 1 | UVC control | none on alt 0 | eye cameras, proprietary format |
 | 2 | UVC stream | bulk IN `0x82` | same, rejected by the kernel |
 
-The public Tobii Stream Engine samples are Windows-only. The working Linux
-implementation for this exact id is [tobiifree](https://github.com/Aetherall/tobiifree)
-(GPL-3.0), pinned in `third_party/tobiifree` at `ad82906`. Its daemon owns
-the USB device and publishes gaze on a Unix socket. The Python package in
-this directory is the client later software should import. It does not link
-the GPL daemon. A license for that client has not been chosen yet.
-
-This repository does not contain the tobiifree checkout. From a fresh clone:
-
-```sh
-git clone https://github.com/Aetherall/tobiifree third_party/tobiifree
-git -C third_party/tobiifree checkout ad82906a9c97f03be8bfcfeff9453198f6feb7a0
-patch -d third_party/tobiifree -p1 < packaging/tobiifreed/reconnect.patch
-```
+The public Tobii Stream Engine samples are Windows-only. The daemon in
+`daemon/` is a GPL-3.0-only Rust translation of
+[tobiifree](https://github.com/Aetherall/tobiifree). It claims the USB
+device with libusb and publishes gaze on a Unix socket. The Python package
+in this directory is the client later software should import. It does not
+link the GPL daemon. A license for that client has not been chosen yet.
 
 ## Run
 
 The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort before `73-seat-late.rules`, which is what turns `TAG+=uaccess` into an access list. With that in place the device node is group `wheel` and this user can open it.
 
 ```sh
-./prefix/bin/tobiifreed
+cargo build --release --manifest-path daemon/Cargo.toml
+./daemon/target/release/tobiifreed --ws 127.0.0.1:7081
 ```
 
 In another terminal:
@@ -89,9 +82,7 @@ Prepared packages live in `packaging/`. `tobiifreed` is the daemon, the seat
 rule, and a disabled user service (`tobiifreed --ws 127.0.0.1:7081`). The
 packaged rule relies on the seat access list. The rule already installed on
 this machine also sets group `wheel`. `python-tobii-input` is the client, the
-calibration window, and Pop. Neither package has been submitted. The gaze
-desktop design is in `docs/omarchy-gaze.md`.
-
-The daemon binary is built with Zig 0.15.2 from
-`~/.local/opt/zig-x86_64-linux-0.15.2`. Zig 0.16 no longer compiles this
-checkout unchanged.
+calibration window, and Pop. The daemon package is
+https://github.com/omacom/omarchy-pkgs/pull/817. The client package stays in
+this repository until a license is chosen. The gaze desktop design is in
+`docs/omarchy-gaze.md`.

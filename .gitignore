@@ -1,5 +1,6 @@
 prefix/
 third_party/
+daemon/target/
 __pycache__/
 *.pyc
 *.pkg.tar.zst
