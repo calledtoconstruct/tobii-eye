@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 use std::io::{ErrorKind, Read};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::os::fd::AsRawFd;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -33,9 +34,35 @@ extern "C" fn on_signal(_: i32) {
     QUIT.store(true, Ordering::SeqCst);
 }
 
-pub fn socket_path() -> PathBuf {
-    let runtime = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".into());
-    PathBuf::from(runtime).join("tobiifreed/gaze.sock")
+pub fn socket_path() -> Option<PathBuf> {
+    let runtime = std::env::var_os("XDG_RUNTIME_DIR")?;
+    if runtime.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(runtime).join("tobiifreed/gaze.sock"))
+}
+
+/// Browsers send Origin. A public page must not open this socket.
+/// A missing Origin is a local program. `null` is a file:// page.
+pub fn origin_allowed(origin: Option<&str>) -> bool {
+    let Some(origin) = origin.map(str::trim).filter(|value| !value.is_empty()) else {
+        return true;
+    };
+    if origin == "null" {
+        return true;
+    }
+    let rest = origin
+        .strip_prefix("http://")
+        .or_else(|| origin.strip_prefix("https://"));
+    let Some(rest) = rest else {
+        return false;
+    };
+    let host = if let Some(inner) = rest.strip_prefix('[') {
+        inner.split(']').next().unwrap_or("")
+    } else {
+        rest.split([':', '/']).next().unwrap_or("")
+    };
+    matches!(host, "localhost" | "127.0.0.1" | "::1")
 }
 
 pub fn run(ws_bind: Option<SocketAddr>) {
@@ -45,7 +72,10 @@ pub fn run(ws_bind: Option<SocketAddr>) {
         display.w_mm, display.h_mm, display.ox_mm, display.oy_mm, display.z_mm, display.tilt_deg
     );
 
-    let path = socket_path();
+    let Some(path) = socket_path() else {
+        eprintln!("tobiifreed: XDG_RUNTIME_DIR is not set, so there is no private socket directory");
+        return;
+    };
     let listener = match bind_unix(&path) {
         Ok(listener) => listener,
         Err(err) => {
@@ -146,9 +176,11 @@ struct WsClient {
 fn bind_unix(path: &std::path::Path) -> std::io::Result<UnixListener> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
+        let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
     }
     let _ = std::fs::remove_file(path);
     let listener = UnixListener::bind(path)?;
+    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
     listener.set_nonblocking(true)?;
     Ok(listener)
 }
@@ -734,6 +766,13 @@ fn try_upgrade(client: &mut WsClient) -> Upgrade {
     let Some(key) = extract_ws_key(&client.buf[..end]) else {
         return Upgrade::Failed;
     };
+    if !origin_allowed(extract_header(&client.buf[..end], "Origin")) {
+        let _ = write_fd(
+            client.stream.as_raw_fd(),
+            b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        );
+        return Upgrade::Failed;
+    }
     let accept = ws_accept(key);
     let response = format!(
         "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n"
@@ -750,20 +789,25 @@ fn find_header_end(data: &[u8]) -> Option<usize> {
     data.windows(4).position(|window| window == b"\r\n\r\n").map(|index| index + 4)
 }
 
-fn extract_ws_key(headers: &[u8]) -> Option<&str> {
+fn extract_header<'a>(headers: &'a [u8], name: &str) -> Option<&'a str> {
     let text = std::str::from_utf8(headers).ok()?;
     for line in text.split("\r\n") {
-        let Some(rest) = line.strip_prefix("Sec-WebSocket-Key:")
-            .or_else(|| line.strip_prefix("sec-websocket-key:"))
-        else {
+        let Some((key, value)) = line.split_once(':') else {
             continue;
         };
-        let rest = rest.trim();
-        if !rest.is_empty() && rest.len() <= 64 {
-            return Some(rest);
+        if key.eq_ignore_ascii_case(name) {
+            let value = value.trim();
+            if !value.is_empty() && value.len() <= 256 {
+                return Some(value);
+            }
         }
     }
     None
+}
+
+fn extract_ws_key(headers: &[u8]) -> Option<&str> {
+    let rest = extract_header(headers, "Sec-WebSocket-Key")?;
+    if rest.len() <= 64 { Some(rest) } else { None }
 }
 
 pub fn ws_accept(key: &str) -> String {
@@ -854,23 +898,10 @@ fn dispatch_ws(hub: &Hub, client: &WsClient, message: Message) {
     if message.kind == ipc::CMD_DISCONNECT {
         return;
     }
+    // Web clients may subscribe and read the display. Calibration stays on the
+    // Unix socket, so a page that can see gaze cannot move the plane.
     let body = match message.kind {
         ipc::CMD_GET_DISPLAY_AREA => CommandBody::GetDisplayArea,
-        ipc::CMD_SET_DISPLAY_AREA => match ipc::read_f64s(&message.payload) {
-            Some(values) => CommandBody::SetDisplayArea(values),
-            None => return,
-        },
-        ipc::CMD_SET_DISPLAY_AREA_CORNERS => match ipc::read_f64s(&message.payload) {
-            Some(values) => CommandBody::SetCorners(values),
-            None => return,
-        },
-        ipc::CMD_ADD_CALIBRATION_POINT => match ipc::read_f64s::<2>(&message.payload) {
-            Some([x, y]) => CommandBody::AddPoint(x, y),
-            None => return,
-        },
-        ipc::CMD_START_CALIBRATION => CommandBody::StartCal,
-        ipc::CMD_FINISH_CALIBRATION => CommandBody::FinishCal,
-        ipc::CMD_CAL_APPLY => CommandBody::Apply(message.payload),
         _ => return,
     };
     enqueue(hub, Command { fd, is_ws: true, body });
@@ -944,5 +975,16 @@ mod tests {
     #[test]
     fn websocket_accept_matches_rfc6455() {
         assert_eq!(ws_accept("dGhlIHNhbXBsZSBub25jZQ=="), "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+    }
+
+    #[test]
+    fn public_pages_cannot_open_the_websocket() {
+        assert!(origin_allowed(None));
+        assert!(origin_allowed(Some("null")));
+        assert!(origin_allowed(Some("http://127.0.0.1:8080")));
+        assert!(origin_allowed(Some("http://localhost")));
+        assert!(origin_allowed(Some("https://[::1]:8443")));
+        assert!(!origin_allowed(Some("https://evil.example")));
+        assert!(!origin_allowed(Some("http://localhost.evil.example")));
     }
 }

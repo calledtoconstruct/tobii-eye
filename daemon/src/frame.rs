@@ -29,7 +29,10 @@ pub const MAGIC_REQ: u32 = 0x51;
 pub const MAGIC_RSP: u32 = 0x52;
 pub const MAGIC_NOTIFY: u32 = 0x53;
 
-/// Includes the trailing NUL that the device expects in the HMAC key.
+/// Realm HMAC key copied from Aetherall/tobiifree
+/// `driver/src/tobiifree_core.zig` (`REALM_KEY`). That project captured it,
+/// including the trailing NUL, from an Eye Tracker 5 session. It is not a
+/// secret derived on this machine.
 pub const REALM_KEY: &[u8] = b"IS2LJC6GIRBBEK2K\x00";
 
 const HELLO_PAYLOAD: &[u8] = &[

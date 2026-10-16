@@ -30,7 +30,9 @@ from tobii_input.protocol import (
 
 
 def default_socket_path() -> str:
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not runtime:
+        raise RuntimeError("XDG_RUNTIME_DIR is not set")
     return os.path.join(runtime, "tobiifreed", "gaze.sock")
 
 
