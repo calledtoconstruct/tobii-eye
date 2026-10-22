@@ -37,7 +37,7 @@ def sample_dict(sample: GazeSample) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Read Tobii Eye Tracker 5 gaze from tobiifreed")
+    parser = argparse.ArgumentParser(description="Read gaze from the current device adapter through tobiifreed")
     parser.add_argument("--socket", default=default_socket_path(), help="Unix socket path")
     parser.add_argument("--count", type=int, default=0, help="Stop after this many samples (0 = until interrupted)")
     parser.add_argument("--json", action="store_true", help="Print one JSON object per sample")

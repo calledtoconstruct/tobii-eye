@@ -1,4 +1,4 @@
-//! TLV fields on the Eye Tracker 5 bulk protocol.
+//! TLV fields on the current device adapter's bulk protocol.
 //!
 //! A field is one type byte, a 4-byte big-endian size, then that many body
 //! bytes. A prolog (type 5, size 4) carries a tag and then its children.

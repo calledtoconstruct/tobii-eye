@@ -1,4 +1,4 @@
-//! Userspace daemon for the Tobii Eye Tracker 5.
+//! Userspace gaze daemon for the current device adapter.
 //!
 //! The process opens the tracker with libusb and serves the existing
 //! tobiifreed socket and WebSocket framing. This is a translation of the

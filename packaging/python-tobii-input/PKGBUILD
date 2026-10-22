@@ -4,7 +4,7 @@
 pkgname=python-tobii-input
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Gaze client, calibration window, and Pop for the Tobii Eye Tracker 5'
+pkgdesc='Gaze client, calibration window, and Pop for the current device adapter'
 arch=('any')
 url='https://github.com/calledtoconstruct/tobii-eye'
 license=('GPL-3.0-only')

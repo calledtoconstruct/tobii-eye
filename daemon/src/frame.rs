@@ -31,8 +31,8 @@ pub const MAGIC_NOTIFY: u32 = 0x53;
 
 /// Realm HMAC key copied from Aetherall/tobiifree
 /// `driver/src/tobiifree_core.zig` (`REALM_KEY`). That project captured it,
-/// including the trailing NUL, from an Eye Tracker 5 session. It is not a
-/// secret derived on this machine.
+/// including the trailing NUL, from a session on the current device adapter.
+/// It is not a secret derived for one machine.
 pub const REALM_KEY: &[u8] = b"IS2LJC6GIRBBEK2K\x00";
 
 const HELLO_PAYLOAD: &[u8] = &[

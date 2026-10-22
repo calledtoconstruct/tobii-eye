@@ -14,7 +14,7 @@ The first version uses those two gestures only. The tracker reports a point,
 a pupil diameter, and a per-eye validity flag (`0` seen, `4` not seen). It
 does not report blink, wink, or turn-away as events. A blink can be inferred
 later from a brief loss of both eyes. A wink can be inferred later from the
-loss of one eye. Both wait until a person records them on this device,
+loss of one eye. Both wait until a person records them on their tracker,
 because a tracking dropout looks like a blink.
 
 Looking away means both eyes stay unseen, or the point leaves the panel, for

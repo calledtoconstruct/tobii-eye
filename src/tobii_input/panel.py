@@ -1,8 +1,9 @@
-"""Map this machine's panel into the tracker's millimeter frame.
+"""Map the panel into the tracker's millimeter frame.
 
 The tracker origin is the IR array. X is right, Y is up, Z is toward the
-person. The Eye Tracker 5 sits under the panel, so the panel's bottom edge
-is a few millimeters above the origin and the panel is centered on X.
+person. The current device adapter sits under the panel, so the panel's
+bottom edge is a few millimeters above the origin and the panel is centered
+on X.
 """
 
 from __future__ import annotations

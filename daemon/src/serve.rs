@@ -312,7 +312,7 @@ impl std::fmt::Display for UsbError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             UsbError::Init(err) | UsbError::Claim(err) | UsbError::Session(err) => write!(f, "{err}"),
-            UsbError::NotFound => write!(f, "device 2104:0313 not found"),
+            UsbError::NotFound => write!(f, "current device adapter 2104:0313 not found"),
         }
     }
 }

@@ -1,7 +1,7 @@
 [project]
 name = "tobii-input"
 version = "0.1.0"
-description = "Read gaze from a Tobii Eye Tracker 5 through the local tobiifreed socket"
+description = "Read gaze from the current device adapter through the local tobiifreed socket"
 requires-python = ">=3.14.9"
 
 [project.scripts]

@@ -345,7 +345,7 @@ class PopStage:
 
 class TrackerWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application, session: GazeSession, mode: str) -> None:
-        super().__init__(application=app, title="Tobii")
+        super().__init__(application=app, title="Gaze")
         self.session = session
         self.set_decorated(False)
         area = Gtk.DrawingArea()

@@ -1,4 +1,4 @@
-"""Enough of the Eye Tracker 5 TLV encoding to read a display-area reply.
+"""Enough of the current device adapter's TLV encoding to read a display-area reply.
 
 The daemon forwards the device payload unchanged. After a 2-byte prefix
 the body is three point3d values: top-left, top-right, bottom-left.

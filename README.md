@@ -1,20 +1,14 @@
-# Tobii Eye Tracker 5 on this machine
+# Gaze input
 
-USB shows a Tobii Eye Tracker 5 on this machine: Tobii AB EyeChip,
-serial `IS5FF-100204240211`, id `2104:0313`, high speed.
+Open-source gaze tools for anyone with a supported tracker. The current
+device adapter is USB `2104:0313`. The seat rule also matches `2104:0102`.
+More adapters can be added later. Nothing here is tied to one unit or one
+screen.
 
-Linux does not ship a driver for it. On boot the kernel tries `uvcvideo`
-and stops:
-
-```
-uvcvideo 1-2:1.2: Unknown video format e39e1ba2-1599-3248-8728-e1b25923a611
-uvcvideo 1-2:1.2: No supported video formats found.
-uvcvideo 1-2:1.1: probe with driver uvcvideo failed with error -22
-```
-
-Nothing is bound after that. The integrated webcam is a different device
-and is unrelated. Gaze does not come out of that video node. It comes from
-the vendor-specific interface:
+Linux does not ship a driver for the current adapter. On boot the kernel
+tries `uvcvideo` and stops, because the eye cameras use a proprietary
+format. Nothing is bound after that. Gaze does not come from a video node.
+It comes from the vendor-specific interface:
 
 | Interface | Class | Endpoints | Role |
 | --- | --- | --- | --- |
@@ -31,7 +25,7 @@ link the GPL daemon. A license for that client has not been chosen yet.
 
 ## Run
 
-The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort before `73-seat-late.rules`, which is what turns `TAG+=uaccess` into an access list. With that in place the device node is group `wheel` and this user can open it.
+The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort before `73-seat-late.rules`, which is what turns `TAG+=uaccess` into an access list. The packaged rule uses that seat access list. `udev/60-tobii-eyetracker.rules` also sets group `wheel`.
 
 ```sh
 cargo build --release --manifest-path daemon/Cargo.toml
@@ -49,11 +43,9 @@ tobii-pop
 
 `tobii-calibrate` is a fullscreen GTK window. Space starts five dots. A dot records only after your gaze moves to it and holds still, or immediately if you press Space while you are looking at it. The same five dots then run again. That second pass measures where the cursor actually sits and saves a screen correction in `~/.config/tobii/screen_warp.json`. Pop uses that correction. Esc quits either one.
 
-The first launch sets the display plane to this panel, 290 by 170 mm, centered 10 mm above the sensor, and writes that to `~/.config/tobii.json`. The daemon's built-in plane is 1500 by 1000 mm, which does not match this screen.
+The client reads the focused monitor's physical size. When the device plane is still the daemon placeholder, 1500 by 1000 mm, it writes a plane for that monitor to `~/.config/tobii.json`. The current adapter sits under the panel: the panel is centered on X, and its bottom edge is 10 mm above the sensor.
 
-`python -m tobii_input` finds the package through
-`~/.local/lib/python3.14/site-packages/tobii-input.pth`. `tobii-gaze` is on
-`~/.local/bin`.
+Install the package, or put `src` on `PYTHONPATH`, before `python -m tobii_input`. `tobii-gaze` is the console script.
 
 The socket is `$XDG_RUNTIME_DIR/tobiifreed/gaze.sock`. The daemon keeps that socket open if the tracker is unplugged, waits for it, and runs the USB handshake again when it returns. A quiet stream is not a gaze point: clients drop a sample that is more than half a second old, and they reconnect if the daemon process itself restarts.
 
@@ -79,10 +71,8 @@ a starting file. `tobii-calibrate` sends the calibration commands on the
 socket, then writes the screen correction Pop reads.
 
 Prepared packages live in `packaging/`. `tobiifreed` is the daemon, the seat
-rule, and a disabled user service (`tobiifreed --ws 127.0.0.1:7081`). The
-packaged rule relies on the seat access list. The rule already installed on
-this machine also sets group `wheel`. `python-tobii-input` is the client, the
-calibration window, and Pop. The daemon package is
-https://github.com/omacom/omarchy-pkgs/pull/817. The client package stays in
-this repository until a license is chosen. The gaze desktop design is in
-`docs/omarchy-gaze.md`.
+rule, and a disabled user service (`tobiifreed --ws 127.0.0.1:7081`).
+`python-tobii-input` is the client, the calibration window, and Pop. The
+daemon package is https://github.com/omacom/omarchy-pkgs/pull/817. The client
+package stays in this repository until a license is chosen. The gaze desktop
+design is in `docs/omarchy-gaze.md`.
