@@ -3,7 +3,7 @@ name = "tobiifreed"
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-only"
-description = "Tobii Eye Tracker 5 daemon. Userspace libusb, Unix socket, optional WebSocket."
+description = "Userspace gaze daemon for the current device adapter. libusb, Unix socket, optional WebSocket."
 publish = false
 
 [[bin]]

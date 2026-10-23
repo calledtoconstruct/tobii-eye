@@ -1,5 +1,5 @@
 pkgbase = python-tobii-input
-	pkgdesc = Gaze client, calibration window, and Pop for the Tobii Eye Tracker 5
+	pkgdesc = Gaze client, calibration window, and Pop for the current device adapter
 	pkgver = 0.1.0
 	pkgrel = 1
 	url = https://github.com/calledtoconstruct/tobii-eye

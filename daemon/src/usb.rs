@@ -1,4 +1,4 @@
-//! libusb transport for the Eye Tracker 5 runtime interface.
+//! libusb transport for the current device adapter.
 //!
 //! Gaze is vendor bulk on interface 0: OUT 0x05, IN 0x83. A transfer larger
 //! than 8192 bytes is split, and each chunk's envelope length describes only

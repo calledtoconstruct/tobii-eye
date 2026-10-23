@@ -2,7 +2,7 @@
 pkgname=tobiifreed
 pkgver=0+424af66
 pkgrel=1
-pkgdesc='Userspace daemon for the Tobii Eye Tracker 5'
+pkgdesc='Userspace gaze daemon for the current device adapter'
 arch=('x86_64' 'aarch64')
 url='https://github.com/calledtoconstruct/tobii-eye'
 license=('GPL-3.0-only')
@@ -19,8 +19,8 @@ source=(
 )
 sha256sums=(
   'SKIP'
-  '06ceddcdcf7d5be5a9a06d7723157f0f1c099c4db9ff073cdf85f29724e668a2'
-  '975c00c5dd9ccbbbb589a7a86fdf36d2f2bea30df5fe189d10a13d7cbb22f26d'
+  '8dedaf217f116306e94be5876dac44d341b34092ea98cc4decfeb157465ecf2f'
+  '219c7069e3ff01eb088e39591cd86d37c02a5fbce5752aa96b793756a42e17ae'
 )
 
 prepare() {

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the seat-user ACL for the Tobii Eye Tracker 5. Needs root
+# Install the seat ACL for the current device adapter (USB 2104:0313). Needs root
 # once. Re-run after the rule changes; already-plugged devices are
 # retriggered so a replug is not required.
 set -eu
@@ -12,5 +12,3 @@ sudo udevadm control --reload
 sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=2104 --attr-match=idProduct=0313
 sudo udevadm settle
 echo "installed /etc/udev/rules.d/$rule"
-ls -l /dev/bus/usb/001/002 2>/dev/null || true
-getfacl -p /dev/bus/usb/001/002 2>/dev/null || true
