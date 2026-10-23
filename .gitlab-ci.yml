@@ -1,0 +1,114 @@
+# tobii-input wheel and sdist. requires-python is >=3.14.9. Backend is setuptools.
+# The daemon and packaging/ directories are out of scope.
+# Merge request and default-branch builds cache pip and expire dist/ after 2 weeks.
+# vX.Y.Z tags build with an empty cache, keep dist/, and publish with CI_JOB_TOKEN.
+# No token is stored in this file. Pipelines stay pending until a runner exists.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - build
+  - release
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+.build_tobii_input:
+  stage: build
+  image: python:3.14.9-slim
+  script:
+    - python -c "import sys; raise SystemExit(0 if sys.version_info[:3] >= (3, 14, 9) else 'requires Python >=3.14.9, got ' + sys.version)"
+    - python -m pip install build
+    - python -m build
+    - |
+      python - <<'PY'
+      import glob
+      import sys
+      wheels = sorted(glob.glob("dist/tobii_input-*.whl") + glob.glob("dist/tobii-input-*.whl"))
+      sdists = sorted(glob.glob("dist/tobii_input-*.tar.gz") + glob.glob("dist/tobii-input-*.tar.gz"))
+      print("wheels", *wheels)
+      print("sdists", *sdists)
+      extras = sorted(
+          path for path in glob.glob("dist/*")
+          if path not in wheels and path not in sdists
+      )
+      if extras:
+          sys.exit("unexpected dist files: " + " ".join(extras))
+      if len(wheels) != 1 or len(sdists) != 1:
+          sys.exit("expected one tobii-input wheel and one sdist")
+      PY
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/
+    expire_in: 2 weeks
+
+build:
+  extends: .build_tobii_input
+  cache:
+    key:
+      prefix: pip
+      files:
+        - pyproject.toml
+    paths:
+      - .pip-cache/
+    policy: pull-push
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Tag builds do not restore .pip-cache or previous dist outputs.
+build_tag:
+  extends: .build_tobii_input
+  cache: []
+  variables:
+    PIP_NO_CACHE_DIR: "1"
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_COMMIT_TAG"
+    expire_in: never
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+
+publish:
+  stage: release
+  image: python:3.14.9-slim
+  needs:
+    - job: build_tag
+      artifacts: true
+  cache: []
+  variables:
+    PIP_NO_CACHE_DIR: "1"
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - python -m pip install twine
+    - TWINE_USERNAME=gitlab-ci-token TWINE_PASSWORD="$CI_JOB_TOKEN" python -m twine upload --non-interactive --repository-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" dist/*
+
+release:
+  stage: release
+  image:
+    name: registry.gitlab.com/gitlab-org/release-cli:latest
+    entrypoint: [""]
+  needs:
+    - job: build_tag
+      artifacts: false
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "Creating release $CI_COMMIT_TAG for tobii-input"
+  release:
+    tag_name: "$CI_COMMIT_TAG"
+    name: "$CI_COMMIT_TAG"
+    description: "tobii-input $CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "tobii-input dist"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/download?job=build_tag"
+          link_type: package
