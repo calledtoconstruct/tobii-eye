@@ -1,9 +1,8 @@
-# Gaze input
+# Tobii Eye Tracker 5 (USB `2104:0313`)
 
-Open-source gaze tools for anyone with a supported tracker. The current
-device adapter is USB `2104:0313`. The seat rule also matches `2104:0102`.
-More adapters can be added later. Nothing here is tied to one unit or one
-screen.
+Open-source gaze tools for a Tobii Eye Tracker 5 (USB `2104:0313`). The seat
+rule also matches `2104:0102`. More adapters can be added later. Nothing here
+is tied to one unit or one screen.
 
 Linux does not ship a driver for the current adapter. On boot the kernel
 tries `uvcvideo` and stops, because the eye cameras use a proprietary
