@@ -20,8 +20,7 @@ The public Tobii Stream Engine samples are Windows-only. The daemon in
 [tobiifree](https://github.com/Aetherall/tobiifree). It claims the USB
 device with libusb and publishes gaze on a Unix socket, and on a WebSocket
 when `--ws` is set. The Python package in this directory is the client
-later software should import. It does not link the GPL daemon. A license
-for that client has not been chosen yet.
+later software should import. It does not link the GPL daemon.
 
 ## Run
 
@@ -78,3 +77,11 @@ rule, and a disabled user service (`tobiifreed --ws 127.0.0.1:7081`).
 daemon package is https://github.com/omacom/omarchy-pkgs/pull/817. The client
 package stays in this repository until a license is chosen. The gaze desktop
 design is in `docs/omarchy-gaze.md`.
+
+## License
+
+- The Python client (`tobii-input`, command `tobii-gaze`) is MIT. See `LICENSE`.
+- The daemon in `daemon/` (`tobiifreed`) is GPL-3.0-only, as a translation of
+  [tobiifree](https://github.com/Aetherall/tobiifree) by Aetherall. See
+  `daemon/LICENSE`.
+- Packaging files follow the component they package.

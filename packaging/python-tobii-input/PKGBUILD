@@ -1,13 +1,12 @@
 # Maintainer: Joseph Woolley <joe@calledtoconstruct.net>
 # Source is this tobii-eye tree. There is no release tarball yet.
-# License is unset in the tree; GPL-3.0-only matches the daemon it speaks to.
 pkgname=python-tobii-input
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='Gaze client, calibration window, and Pop for the current device adapter'
 arch=('any')
 url='https://github.com/calledtoconstruct/tobii-eye'
-license=('GPL-3.0-only')
+license=('MIT')
 depends=('python' 'python-gobject' 'gtk4' 'tobiifreed')
 options=('!debug')
 

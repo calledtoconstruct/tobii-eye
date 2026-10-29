@@ -3,6 +3,8 @@ name = "tobii-input"
 version = "0.1.0"
 description = "Read gaze from the current device adapter through the local tobiifreed socket"
 requires-python = ">=3.14.9"
+license = "MIT"
+license-files = ["LICENSE"]
 
 [project.scripts]
 tobii-gaze = "tobii_input.__main__:main"
@@ -10,7 +12,7 @@ tobii-calibrate = "tobii_input.calibrate:main"
 tobii-pop = "tobii_input.game:main"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
