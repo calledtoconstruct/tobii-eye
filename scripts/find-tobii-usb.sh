@@ -3,6 +3,7 @@
 # Device nodes come from sysfs busnum/devnum. There is no fixed bus path.
 # TOBII_SYSFS overrides /sys. TOBII_DEV_ROOT overrides /dev.
 # When nothing is plugged in, say so and exit 0.
+# When getfacl is missing or fails, say so and still exit 0.
 set -eu
 
 sysfs=${TOBII_SYSFS:-/sys}
@@ -45,7 +46,9 @@ if [ -d "$devices" ]; then
     node=$(printf '%s/bus/usb/%03d/%03d' "$dev_root" "$bus" "$num")
     found=1
     printf '%s\n' "$node"
-    getfacl -p -- "$node" || true
+    if ! getfacl -p -- "$node"; then
+      printf 'getfacl failed for %s\n' "$node"
+    fi
   done
 fi
 

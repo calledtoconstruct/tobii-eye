@@ -25,7 +25,7 @@ for that client has not been chosen yet.
 
 ## Run
 
-The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort before `73-seat-late.rules`, which is what turns `TAG+=uaccess` into an access list. The packaged rule uses that seat access list. `udev/60-tobii-eyetracker.rules` also sets group `wheel`.
+The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort before `73-seat-late.rules`, which is what turns `TAG+=uaccess` into an access list. `udev/60-tobii-eyetracker.rules` and the packaged rule are that same file.
 
 ```sh
 cargo build --release --manifest-path daemon/Cargo.toml
