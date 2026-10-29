@@ -74,8 +74,7 @@ socket, then writes the screen correction Pop reads.
 Prepared packages live in `packaging/`. `tobiifreed` is the daemon, the seat
 rule, and a disabled user service (`tobiifreed --ws 127.0.0.1:7081`).
 `python-tobii-input` is the client, the calibration window, and Pop. The
-daemon package is https://github.com/omacom/omarchy-pkgs/pull/817. The client
-package stays in this repository until a license is chosen. The gaze desktop
+daemon package is https://github.com/omacom/omarchy-pkgs/pull/817. The gaze desktop
 design is in `docs/omarchy-gaze.md`.
 
 ## License
