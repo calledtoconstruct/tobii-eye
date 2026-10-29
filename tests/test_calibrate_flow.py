@@ -1,5 +1,35 @@
+import sys
+import types
 import unittest
 from unittest.mock import patch
+
+
+def _stub_gi_when_missing() -> None:
+    # python:3.14.9-slim does not ship PyGObject, and this job does not install it.
+    try:
+        import gi
+    except ModuleNotFoundError:
+        pass
+    else:
+        return
+    gi = types.ModuleType("gi")
+    gi.require_version = lambda *_args, **_kwargs: None
+    repository = types.ModuleType("gi.repository")
+
+    class _Namespace:
+        def __getattr__(self, name: str):
+            if name.isupper():
+                return 0
+            return type(name, (), {})
+
+    repository.Gdk = _Namespace()
+    repository.GLib = _Namespace()
+    repository.Gtk = _Namespace()
+    sys.modules["gi"] = gi
+    sys.modules["gi.repository"] = repository
+
+
+_stub_gi_when_missing()
 
 from tobii_input.desktop import POINTS, CalibrateStage, ScreenCorrection
 from tobii_input.warp import Fixation
