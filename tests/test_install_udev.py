@@ -27,18 +27,23 @@ def _sysfs_device(
     _write(dev / "devnum", num + "\n")
 
 
-def _run_find(sysfs: Path, dev_root: Path) -> subprocess.CompletedProcess[str]:
+def _run_find(
+    sysfs: Path, dev_root: Path, path_prefix: Path | None = None
+) -> subprocess.CompletedProcess[str]:
     # The installer calls sudo. This runs only the lookup.
+    env = {
+        **os.environ,
+        "TOBII_SYSFS": str(sysfs),
+        "TOBII_DEV_ROOT": str(dev_root),
+    }
+    if path_prefix is not None:
+        env["PATH"] = str(path_prefix) + os.pathsep + env.get("PATH", "")
     return subprocess.run(
         [str(_FIND)],
         check=False,
         capture_output=True,
         text=True,
-        env={
-            **os.environ,
-            "TOBII_SYSFS": str(sysfs),
-            "TOBII_DEV_ROOT": str(dev_root),
-        },
+        env=env,
     )
 
 
@@ -75,11 +80,23 @@ class InstallUdevTest(unittest.TestCase):
             )
             for node in matched + skipped:
                 _write(node, "")
-            proc = _run_find(sysfs, dev_root)
+            # python:3.14.9-slim has no getfacl. The script hides that with
+            # `|| true`, so the fixture supplies the ACL lines itself.
+            bin_dir = root / "bin"
+            stub = bin_dir / "getfacl"
+            _write(
+                stub,
+                "#!/bin/sh\n"
+                '[ "$1" = "-p" ] && [ "$2" = "--" ] || exit 1\n'
+                "printf 'user::fixture %s\\n' \"$3\"\n",
+            )
+            stub.chmod(0o755)
+            proc = _run_find(sysfs, dev_root, bin_dir)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertNotIn("no Tobii device plugged in", proc.stdout)
         for node in matched:
             self.assertIn(str(node), proc.stdout)
+            self.assertIn(f"user::fixture {node}", proc.stdout)
         for node in skipped:
             self.assertNotIn(str(node), proc.stdout)
         self.assertNotIn("/dev/bus/usb/001/002", proc.stdout)
