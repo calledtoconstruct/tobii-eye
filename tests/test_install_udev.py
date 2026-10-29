@@ -7,6 +7,9 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 _FIND = _ROOT / "scripts" / "find-tobii-usb.sh"
 _INSTALL = _ROOT / "scripts" / "install-udev.sh"
+_RULE_NAME = "60-tobii-eyetracker.rules"
+_UDEV_RULE = _ROOT / "udev" / _RULE_NAME
+_PACKAGE_RULE = _ROOT / "packaging" / "tobiifreed" / _RULE_NAME
 
 
 def _write(path: Path, text: str) -> None:
@@ -93,3 +96,18 @@ class InstallUdevTest(unittest.TestCase):
         finder = _FIND.read_text(encoding="utf-8")
         self.assertNotIn("sudo", finder)
         self.assertNotIn("001/002", finder)
+
+    def test_one_udev_rule_matches_package_without_group(self) -> None:
+        self.assertTrue(_PACKAGE_RULE.is_file())
+        self.assertFalse(_PACKAGE_RULE.is_symlink())
+        self.assertEqual(_UDEV_RULE.resolve(), _PACKAGE_RULE.resolve())
+        text = _PACKAGE_RULE.read_text(encoding="utf-8")
+        self.assertEqual(_UDEV_RULE.read_text(encoding="utf-8"), text)
+        self.assertNotIn("GROUP", text)
+        self.assertEqual(
+            [line for line in text.splitlines() if line.startswith("SUBSYSTEM==")],
+            [
+                'SUBSYSTEM=="usb", ATTR{idVendor}=="2104", ATTR{idProduct}=="0313", MODE="0660", TAG+="uaccess"',
+                'SUBSYSTEM=="usb", ATTR{idVendor}=="2104", ATTR{idProduct}=="0102", MODE="0660", TAG+="uaccess"',
+            ],
+        )
