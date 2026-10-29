@@ -13,12 +13,19 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 stages:
+  - test
   - build
   - release
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+test:
+  stage: test
+  image: python:3.14.9-slim
+  script:
+    - PYTHONPATH=src python -m unittest discover -s tests -v
 
 .build_tobii_input:
   stage: build
