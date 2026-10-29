@@ -25,6 +25,8 @@ test:
   stage: test
   image: python:3.14.9-slim
   script:
+    # find-tobii-usb.sh prints getfacl output. The slim image does not ship it.
+    - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends acl
     - PYTHONPATH=src python -m unittest discover -s tests -v
 
 .build_tobii_input:
