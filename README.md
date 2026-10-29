@@ -18,9 +18,10 @@ It comes from the vendor-specific interface:
 The public Tobii Stream Engine samples are Windows-only. The daemon in
 `daemon/` is a GPL-3.0-only Rust translation of
 [tobiifree](https://github.com/Aetherall/tobiifree). It claims the USB
-device with libusb and publishes gaze on a Unix socket. The Python package
-in this directory is the client later software should import. It does not
-link the GPL daemon. A license for that client has not been chosen yet.
+device with libusb and publishes gaze on a Unix socket, and on a WebSocket
+when `--ws` is set. The Python package in this directory is the client
+later software should import. It does not link the GPL daemon. A license
+for that client has not been chosen yet.
 
 ## Run
 
@@ -28,7 +29,7 @@ The seat rule is `/etc/udev/rules.d/60-tobii-eyetracker.rules`. It has to sort b
 
 ```sh
 cargo build --release --manifest-path daemon/Cargo.toml
-./daemon/target/release/tobiifreed --ws 127.0.0.1:7081
+./daemon/target/release/tobiifreed
 ```
 
 In another terminal:
@@ -46,7 +47,9 @@ The client reads the focused monitor's physical size. When the device plane is s
 
 Install the package, or put `src` on `PYTHONPATH`, before `python -m tobii_input`. `tobii-gaze` is the console script.
 
-The socket is `$XDG_RUNTIME_DIR/tobiifreed/gaze.sock`. The daemon keeps that socket open if the tracker is unplugged, waits for it, and runs the USB handshake again when it returns. A quiet stream is not a gaze point: clients drop a sample that is more than half a second old, and they reconnect if the daemon process itself restarts.
+While it is serving, the daemon always binds the Unix socket `$XDG_RUNTIME_DIR/tobiifreed/gaze.sock`. If `XDG_RUNTIME_DIR` is unset or empty, it exits without listening. A WebSocket is opened only when `--ws` is set. `--ws` with no address, and `--ws 127.0.0.1:7081`, listen on `ws://127.0.0.1:7081`. A port alone, such as `--ws 7081`, listens on `127.0.0.1` at that port. The Python client uses the Unix socket. The disabled user service passes `--ws 127.0.0.1:7081`, so that process serves both.
+
+The daemon keeps that socket open if the tracker is unplugged, waits for it, and runs the USB handshake again when it returns. A quiet stream is not a gaze point: clients drop a sample that is more than half a second old, and they reconnect if the daemon process itself restarts.
 
 ```python
 from tobii_input import TobiiClient
