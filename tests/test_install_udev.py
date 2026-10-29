@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -28,7 +29,11 @@ def _sysfs_device(
 
 
 def _run_find(
-    sysfs: Path, dev_root: Path, path_prefix: Path | None = None
+    sysfs: Path,
+    dev_root: Path,
+    *,
+    path: str | None = None,
+    extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     # The installer calls sudo. This runs only the lookup.
     env = {
@@ -36,8 +41,10 @@ def _run_find(
         "TOBII_SYSFS": str(sysfs),
         "TOBII_DEV_ROOT": str(dev_root),
     }
-    if path_prefix is not None:
-        env["PATH"] = str(path_prefix) + os.pathsep + env.get("PATH", "")
+    if path is not None:
+        env["PATH"] = path
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [str(_FIND)],
         check=False,
@@ -45,6 +52,28 @@ def _run_find(
         text=True,
         env=env,
     )
+
+
+def _layout(root: Path) -> tuple[Path, Path, tuple[Path, Path], tuple[Path, Path]]:
+    sysfs = root / "sys"
+    dev_root = root / "dev"
+    _sysfs_device(sysfs, "2-4", "2104", "0313", "2", "7")
+    _sysfs_device(sysfs, "4-1", "2104", "0102", "4", "9")
+    _sysfs_device(sysfs, "1-3", "2104", "ffff", "1", "4")
+    _sysfs_device(sysfs, "3-1", "1234", "0313", "3", "2")
+    _write(sysfs / "bus" / "usb" / "devices" / "2-4:1.0" / "idVendor", "2104\n")
+    _write(sysfs / "bus" / "usb" / "devices" / "2-4:1.0" / "idProduct", "0313\n")
+    matched = (
+        dev_root / "bus" / "usb" / "002" / "007",
+        dev_root / "bus" / "usb" / "004" / "009",
+    )
+    skipped = (
+        dev_root / "bus" / "usb" / "001" / "004",
+        dev_root / "bus" / "usb" / "003" / "002",
+    )
+    for node in matched + skipped:
+        _write(node, "")
+    return sysfs, dev_root, matched, skipped
 
 
 class InstallUdevTest(unittest.TestCase):
@@ -62,45 +91,73 @@ class InstallUdevTest(unittest.TestCase):
     def test_fixture_prints_acl_for_both_product_ids(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            sysfs = root / "sys"
-            dev_root = root / "dev"
-            _sysfs_device(sysfs, "2-4", "2104", "0313", "2", "7")
-            _sysfs_device(sysfs, "4-1", "2104", "0102", "4", "9")
-            _sysfs_device(sysfs, "1-3", "2104", "ffff", "1", "4")
-            _sysfs_device(sysfs, "3-1", "1234", "0313", "3", "2")
-            _write(sysfs / "bus" / "usb" / "devices" / "2-4:1.0" / "idVendor", "2104\n")
-            _write(sysfs / "bus" / "usb" / "devices" / "2-4:1.0" / "idProduct", "0313\n")
-            matched = (
-                dev_root / "bus" / "usb" / "002" / "007",
-                dev_root / "bus" / "usb" / "004" / "009",
-            )
-            skipped = (
-                dev_root / "bus" / "usb" / "001" / "004",
-                dev_root / "bus" / "usb" / "003" / "002",
-            )
-            for node in matched + skipped:
-                _write(node, "")
-            # python:3.14.9-slim has no getfacl. The script hides that with
-            # `|| true`, so the fixture supplies the ACL lines itself.
+            sysfs, dev_root, matched, skipped = _layout(root)
+            # Different modes, so a canned ACL line cannot satisfy both nodes.
+            matched[0].chmod(0o660)
+            matched[1].chmod(0o666)
+            proc = _run_find(sysfs, dev_root)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("no Tobii device plugged in", proc.stdout)
+        self.assertNotIn("getfacl failed", proc.stdout)
+        self.assertNotIn("user::fixture", proc.stdout)
+        # `# file:` is getfacl -p naming the path it opened.
+        self.assertEqual(proc.stdout.count("# file: "), 2)
+        for node in matched:
+            self.assertIn(str(node), proc.stdout)
+            self.assertIn(f"# file: {node}\n", proc.stdout)
+        self.assertIn("user::rw-\ngroup::rw-\nother::---\n", proc.stdout)
+        self.assertIn("user::rw-\ngroup::rw-\nother::rw-\n", proc.stdout)
+        for node in skipped:
+            self.assertNotIn(str(node), proc.stdout)
+        self.assertNotIn("/dev/bus/usb/001/002", proc.stdout)
+
+    def test_getfacl_failure_is_visible(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            sysfs, dev_root, matched, skipped = _layout(root)
             bin_dir = root / "bin"
+            bin_dir.mkdir()
+            tr = shutil.which("tr")
+            self.assertIsNotNone(tr)
+            os.symlink(tr, bin_dir / "tr")
+            missing = _run_find(sysfs, dev_root, path=str(bin_dir))
+        self.assertEqual(missing.returncode, 0, missing.stderr)
+        self.assertIn("not found", missing.stderr)
+        self.assertNotIn("user::", missing.stdout)
+        for node in matched:
+            self.assertIn(f"getfacl failed for {node}", missing.stdout)
+            self.assertNotIn(f"# file: {node}", missing.stdout)
+        for node in skipped:
+            self.assertNotIn(str(node), missing.stdout)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            sysfs, dev_root, matched, skipped = _layout(root)
+            log = root / "getfacl.log"
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
             stub = bin_dir / "getfacl"
             _write(
                 stub,
                 "#!/bin/sh\n"
-                '[ "$1" = "-p" ] && [ "$2" = "--" ] || exit 1\n'
-                "printf 'user::fixture %s\\n' \"$3\"\n",
+                'printf "%s %s %s\\n" "$1" "$2" "$3" >> "$GETFACL_LOG"\n'
+                "exit 1\n",
             )
             stub.chmod(0o755)
-            proc = _run_find(sysfs, dev_root, bin_dir)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertNotIn("no Tobii device plugged in", proc.stdout)
+            failed = _run_find(
+                sysfs,
+                dev_root,
+                path=str(bin_dir) + os.pathsep + os.environ.get("PATH", ""),
+                extra_env={"GETFACL_LOG": str(log)},
+            )
+            calls = log.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(failed.returncode, 0, failed.stderr)
+        self.assertEqual(sorted(calls), sorted(f"-p -- {node}" for node in matched))
+        self.assertNotIn("user::", failed.stdout)
         for node in matched:
-            self.assertIn(str(node), proc.stdout)
-            self.assertIn(f"user::fixture {node}", proc.stdout)
+            self.assertIn(f"getfacl failed for {node}", failed.stdout)
         for node in skipped:
-            self.assertNotIn(str(node), proc.stdout)
-        self.assertNotIn("/dev/bus/usb/001/002", proc.stdout)
-        self.assertEqual(proc.stdout.count("user::"), 2)
+            self.assertNotIn(str(node), failed.stdout)
 
     def test_install_triggers_by_vendor_without_hardcoded_bus(self) -> None:
         text = _INSTALL.read_text(encoding="utf-8")
